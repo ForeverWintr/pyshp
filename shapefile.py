@@ -77,7 +77,8 @@ def u(v):
             else:
                 # Error.
                 raise Exception('Unknown input type')
-        except: return v
+        except Exception:
+            return v
     else:
         # For python 2 assume str passed in and return str.
         return v
