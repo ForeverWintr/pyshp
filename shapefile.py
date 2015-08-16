@@ -17,6 +17,7 @@ import time
 import array
 import tempfile
 import itertools
+from datetime import date
 
 #
 # Constants for shape types
@@ -248,7 +249,7 @@ class Reader:
                 self.dbf = kwargs["dbf"]
                 if hasattr(self.dbf, "seek"):
                     self.dbf.seek(0)
-        if self.shp or self.dbf:        
+        if self.shp or self.dbf:
             self.load()
         else:
             raise ShapefileException("Shapefile Reader requires a shapefile or file-like object.")
@@ -373,7 +374,7 @@ class Reader:
             record.m = unpack("<d", f.read(8))
         # Seek to the end of this record as defined by the record header because
         # the shapefile spec doesn't require the actual content to meet the header
-        # definition.  Probably allowed for lazy feature deletion. 
+        # definition.  Probably allowed for lazy feature deletion.
         f.seek(next)
         return record
 
@@ -434,7 +435,7 @@ class Reader:
         self.shpLength = shp.tell()
         shp.seek(100)
         while shp.tell() < self.shpLength:
-            yield self.__shape()    
+            yield self.__shape()
 
     def __dbfHeaderLength(self):
         """Retrieves the header length of a dbf file header."""
@@ -488,8 +489,7 @@ class Reader:
             # deleted record
             return None
         record = []
-        for (name, typ, size, deci), value in zip(self.fields,
-                                                                                                recordContents):
+        for (name, typ, size, deci), value in zip(self.fields, recordContents):
             if name == 'DeletionFlag':
                 continue
             elif not value.strip():
@@ -510,7 +510,7 @@ class Reader:
                 else:
                     try:
                         y, m, d = int(value[:4]), int(value[4:6]), int(value[6:8])
-                        value = [y, m, d]
+                        value = date(y, m, d)
                     except:
                         value = value.strip()
             elif typ == b('L'):
@@ -828,7 +828,7 @@ class Writer:
                     if hasattr(s,"z"):
                         f.write(pack("<%sd" % len(s.z), *s.z))
                     else:
-                        [f.write(pack("<d", p[2])) for p in s.points]  
+                        [f.write(pack("<d", p[2])) for p in s.points]
                 except error:
                     raise ShapefileException("Failed to write elevation values for record %s. Expected floats." % recNum)
             # Write m extremes and values
@@ -855,7 +855,7 @@ class Writer:
                 if hasattr(s, "z"):
                     try:
                         if not s.z:
-                            s.z = (0,)    
+                            s.z = (0,)
                         f.write(pack("<d", s.z[0]))
                     except error:
                         raise ShapefileException("Failed to write elevation value for record %s. Expected floats." % recNum)
@@ -871,11 +871,11 @@ class Writer:
                 if hasattr(s, "m"):
                     try:
                         if not s.m:
-                            s.m = (0,) 
+                            s.m = (0,)
                         f.write(pack("<1d", s.m[0]))
                     except error:
-                        raise ShapefileException("Failed to write measure value for record %s. Expected floats." % recNum)    
-                else:                                
+                        raise ShapefileException("Failed to write measure value for record %s. Expected floats." % recNum)
+                else:
                     try:
                         if len(s.points[0])<4:
                             s.points[0].append(0)
@@ -908,10 +908,12 @@ class Writer:
             for (fieldName, fieldType, size, dec), value in zip(self.fields, record):
                 fieldType = fieldType.upper()
                 size = int(size)
-                if fieldType.upper() == "N":
+                if fieldType == 'N':
                     value = str(value).rjust(size)
                 elif fieldType == 'L':
                     value = str(value)[0].upper()
+                elif fieldType == 'D' and isinstance(value, date):
+                    value = value.strftime('%Y%m%d').ljust(size)
                 else:
                     value = str(value)[:size].ljust(size)
                 if len(value) != size:
@@ -968,9 +970,18 @@ class Writer:
             polyShape.partTypes = partTypes
         self._shapes.append(polyShape)
 
-    def field(self, name, fieldType="C", size="50", decimal=0):
+    def field(self, name, fieldType='C', size=50, decimal=0):
         """Adds a dbf field descriptor to the shapefile."""
+        fieldType = fieldType.upper()
+        size = int(size)
+        decimal = int(decimal)
+        if fieldType == 'D' and size < 8:
+            raise ShapefileException("Date fields require min size of 8 (%d is too small)" % size)
         self.fields.append((name, fieldType, size, decimal))
+
+    def fieldDate(self, name):
+        """Adds a Date type dbf descriptor to the shapefile"""
+        self.field(name, 'D', 8, 0)
 
     def record(self, *recordList, **recordDict):
         """Creates a dbf attribute record. You can submit either a sequence of
@@ -1038,8 +1049,8 @@ class Writer:
         be written exclusively using saveShp, saveShx, and saveDbf respectively.
         If target is specified but not shp,shx, or dbf then the target path and
         file name are used.  If no options or specified, a unique base file name
-        is generated to save the files and the base file name is returned as a 
-        string. 
+        is generated to save the files and the base file name is returned as a
+        string.
         """
         # Create a unique file name if one is not defined
         if shp:
@@ -1053,7 +1064,7 @@ class Writer:
             if not target:
                 temp = tempfile.NamedTemporaryFile(prefix="shapefile_",dir=os.getcwd())
                 target = temp.name
-                generated = True         
+                generated = True
             self.saveShp(target)
             self.shp.close()
             self.saveShx(target)
