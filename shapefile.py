@@ -69,15 +69,15 @@ def u(v):
         # the problem.  This function could
         # be condensed further.
         try:
-          if isinstance(v, bytes):
-              # For python 3 decode bytes to str.
-              return v.decode('utf-8')
-          elif isinstance(v, str):
-              # Already str.
-              return v
-          else:
-              # Error.
-              raise Exception('Unknown input type')
+            if isinstance(v, bytes):
+                # For python 3 decode bytes to str.
+                return v.decode('utf-8')
+            elif isinstance(v, str):
+                # Already str.
+                return v
+            else:
+                # Error.
+                raise Exception('Unknown input type')
         except: return v
     else:
         # For python 2 assume str passed in and return str.
@@ -123,19 +123,19 @@ class _Shape:
     def __geo_interface__(self):
         if self.shapeType in [POINT, POINTM, POINTZ]:
             return {
-            'type': 'Point',
-            'coordinates': tuple(self.points[0])
+                'type': 'Point',
+                'coordinates': tuple(self.points[0])
             }
         elif self.shapeType in [MULTIPOINT, MULTIPOINTM, MULTIPOINTZ]:
             return {
-            'type': 'MultiPoint',
-            'coordinates': tuple([tuple(p) for p in self.points])
+                'type': 'MultiPoint',
+                'coordinates': tuple([tuple(p) for p in self.points])
             }
         elif self.shapeType in [POLYLINE, POLYLINEM, POLYLINEZ]:
             if len(self.parts) == 1:
                 return {
-                'type': 'LineString',
-                'coordinates': tuple([tuple(p) for p in self.points])
+                    'type': 'LineString',
+                    'coordinates': tuple([tuple(p) for p in self.points])
                 }
             else:
                 ps = None
@@ -150,14 +150,14 @@ class _Shape:
                 else:
                     coordinates.append(tuple([tuple(p) for p in self.points[part:]]))
                 return {
-                'type': 'MultiLineString',
-                'coordinates': tuple(coordinates)
+                    'type': 'MultiLineString',
+                    'coordinates': tuple(coordinates)
                 }
         elif self.shapeType in [POLYGON, POLYGONM, POLYGONZ]:
             if len(self.parts) == 1:
                 return {
-                'type': 'Polygon',
-                'coordinates': (tuple([tuple(p) for p in self.points]),)
+                    'type': 'Polygon',
+                    'coordinates': (tuple([tuple(p) for p in self.points]),)
                 }
             else:
                 ps = None
@@ -182,13 +182,13 @@ class _Shape:
                 polys.append(poly)
                 if len(polys) == 1:
                     return {
-                    'type': 'Polygon',
-                    'coordinates': tuple(polys[0])
+                        'type': 'Polygon',
+                        'coordinates': tuple(polys[0])
                     }
                 elif len(polys) > 1:
                     return {
-                    'type': 'MultiPolygon',
-                    'coordinates': polys
+                        'type': 'MultiPolygon',
+                        'coordinates': polys
                     }
 
 class _ShapeRecord:
@@ -444,7 +444,7 @@ class Reader:
                 raise ShapefileException("Shapefile Reader requires a shapefile or file-like object. (no dbf file found)")
             dbf = self.dbf
             (self.numRecords, self.__dbfHdrLength) = \
-                    unpack("<xxxxLH22x", dbf.read(32))
+                unpack("<xxxxLH22x", dbf.read(32))
         return self.__dbfHdrLength
 
     def __dbfHeader(self):
@@ -511,11 +511,11 @@ class Reader:
                     try:
                         y, m, d = int(value[:4]), int(value[4:6]), int(value[6:8])
                         value = date(y, m, d)
-                    except:
+                    except Exception:
                         value = value.strip()
             elif typ == b('L'):
                 value = (value in b('YyTt') and b('T')) or \
-                                        (value in b('NnFf') and b('F')) or b('?')
+                    (value in b('NnFf') and b('F')) or b('?')
             else:
                 value = u(value)
                 value = value.strip()
@@ -569,7 +569,7 @@ class Reader:
         all records in a shapefile."""
         shapeRecords = []
         return [_ShapeRecord(shape=rec[0], record=rec[1]) \
-                                for rec in zip(self.shapes(), self.records())]
+                for rec in zip(self.shapes(), self.records())]
 
     def iterShapeRecords(self):
         """Returns a generator of combination geometry/attribute records for
@@ -760,7 +760,7 @@ class Writer:
         headerLength = numFields * 32 + 33
         recordLength = sum([int(field[2]) for field in self.fields]) + 1
         header = pack('<BBBBLHH20x', version, year, month, day, numRecs,
-                headerLength, recordLength)
+                      headerLength, recordLength)
         f.write(header)
         # Field descriptors
         for field in self.fields:
@@ -951,8 +951,8 @@ class Writer:
         # Make sure polygons are closed
         if shapeType in (5,15,25,31):
             for part in parts:
-                    if part[0] != part[-1]:
-                        part.append(part[0])
+                if part[0] != part[-1]:
+                    part.append(part[0])
         for part in parts:
             polyShape.parts.append(len(polyShape.points))
             for point in part:
